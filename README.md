@@ -21,6 +21,16 @@ PORT=3021 node server.js
 - `GET /adjustments?clockId=`
 - `GET /retests?clockId=&qualified=`
 
+## 下一步处置
+
+`GET /clocks` 列表与 `GET /clocks/:id/history` 单表详情共用同一判断，在钟表对象上返回 `nextAction`：
+
+- `停调`：最新一次复测已达标，较早的未达标记录不覆盖该结论
+- `需保养`：最新一次复测未达标且振幅低于 220
+- `继续微调`：最新一次复测未达标且振幅不低于 220
+- `待复测`：已有调校依据但尚无复测
+- `待首次调校`：找不到调校依据且尚无复测
+
 ## 闭环示例
 
 ```bash

@@ -126,6 +126,17 @@ function latestAdjustment(db, clockId) {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
 }
 
+function nextAction(db, clock) {
+  const retest = latestRetest(db, clock.id);
+  const adjustment = latestAdjustment(db, clock.id);
+
+  if (!retest) {
+    return adjustment ? "待复测" : "待首次调校";
+  }
+  if (retest.qualified) return "停调";
+  return Number(retest.amplitude) < 220 ? "需保养" : "继续微调";
+}
+
 function clockSummary(db, clock) {
   const retest = latestRetest(db, clock.id);
   const adjustment = latestAdjustment(db, clock.id);
@@ -133,7 +144,8 @@ function clockSummary(db, clock) {
     ...clock,
     latestAdjustment: adjustment,
     latestRetest: retest,
-    qualified: retest ? retest.qualified : false
+    qualified: retest ? retest.qualified : false,
+    nextAction: nextAction(db, clock)
   };
 }
 
@@ -183,7 +195,14 @@ async function handle(req, res) {
     const clock = findClock(db, historyMatch[1]);
     const adjustments = db.adjustments.filter((item) => item.clockId === clock.id);
     const retests = db.retests.filter((item) => item.clockId === clock.id);
-    return send(res, 200, { data: { clock, adjustments, retests, latestRetest: latestRetest(db, clock.id) } });
+    return send(res, 200, {
+      data: {
+        clock: clockSummary(db, clock),
+        adjustments,
+        retests,
+        latestRetest: latestRetest(db, clock.id)
+      }
+    });
   }
 
   const adjustmentMatch = pathname.match(/^\/clocks\/([^/]+)\/adjustments$/);
